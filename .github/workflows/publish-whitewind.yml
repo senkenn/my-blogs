@@ -1,0 +1,73 @@
+name: Publish to WhiteWind (ATProto)
+
+on:
+  push:
+    paths:
+      - "articles/*.md"
+      - "images/**"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find changed markdown
+        id: files
+        run: |
+          echo "MD=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
+            | grep '^posts/.*\.md$' || true)" >> $GITHUB_OUTPUT
+
+      - name: Stop if nothing to do
+        if: steps.files.outputs.MD == ''
+        run: echo "No posts changed."
+
+      - name: Post each file to ATProto (WhiteWind)
+        if: steps.files.outputs.MD != ''
+        env:
+          PDS_HOST: ${{ secrets.PDS_HOST }}
+          BS_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BS_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for f in ${MD}; do
+            echo "::group::Posting $f"
+            CONTENT="$(cat "$f")"
+
+            # タイトル: 先頭の見出し(# )を拾う。なければファイル名
+            TITLE="$(grep -m1 -E '^\s*# ' "$f" | sed -E 's/^\s*#\s+//' || true)"
+            if [ -z "$TITLE" ]; then TITLE="$(basename "$f" .md)"; fi
+
+            # 1) セッション作成（トークン取得）
+            SESSION_JSON="$(curl -fsS -X POST "$PDS_HOST/xrpc/com.atproto.server.createSession" \
+              -H 'Content-Type: application/json' \
+              -d "$(jq -nc --arg id "$BS_HANDLE" --arg pw "$BS_APP_PASSWORD" \
+                    '{identifier:$id, password:$pw}')" )"
+
+            ACCESS_JWT="$(echo "$SESSION_JSON" | jq -r '.accessJwt')"
+            DID="$(echo "$SESSION_JSON" | jq -r '.did')"
+
+            # 2) WhiteWind エントリ作成
+            NOW="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            RECORD="$(jq -nc \
+              --arg content "$CONTENT" \
+              --arg title "$TITLE" \
+              --arg now "$NOW" \
+              '{ "$type":"com.whtwnd.blog.entry",
+                 "content":$content,
+                 "title":$title,
+                 "visibility":"public",
+                 "createdAt":$now }')"
+
+            curl -fsS -X POST "$PDS_HOST/xrpc/com.atproto.repo.createRecord" \
+              -H "Authorization: Bearer $ACCESS_JWT" \
+              -H 'Content-Type: application/json' \
+              -d "$(jq -nc --arg repo "$DID" \
+                            --arg collection "com.whtwnd.blog.entry" \
+                            --argjson record "$RECORD" \
+                            '{repo:$repo, collection:$collection, record:$record}')" \
+              | jq .
+            echo "::endgroup::"
+          done
