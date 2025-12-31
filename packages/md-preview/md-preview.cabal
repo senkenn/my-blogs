@@ -1,0 +1,34 @@
+cabal-version:      3.4
+
+name:               md-preview
+version:            0.1.0.0
+synopsis:           Markdown preview server
+
+license:            MIT
+license-file:       LICENSE
+author:             senkenn
+maintainer:         senken32@gmail.com
+build-type:         Simple
+
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -threaded
+
+executable md-preview
+    import:           warnings
+
+    main-is:          Main.hs
+
+    build-depends:
+        base >=4.18 && <5
+      , text
+      , bytestring
+      , warp
+      , wai
+      , http-types
+      , md-core
+
+    hs-source-dirs:   app
+
+    default-language: GHC2024
