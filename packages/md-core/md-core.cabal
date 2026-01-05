@@ -105,5 +105,5 @@ test-suite md-core-test
     build-depends:
         base >=4.18 && <5,
         md-core,
-        hspec,
+        aeson,
         text
