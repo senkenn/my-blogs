@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "packages/md-core/src"
+      component: "lib:md-core"
+    - path: "packages/md-core/test"
+      component: "md-core:test:md-core-test"
+    - path: "packages/md-preview/app"
+      component: "exe:md-preview"
