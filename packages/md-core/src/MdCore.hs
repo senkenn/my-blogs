@@ -1,7 +1,6 @@
-module MdCore (renderHtml) where
+module MdCore (markdownToHtml) where
 
 import Data.Text (Text)
 
-renderHtml :: Text -> Text
-renderHtml = id
-
+markdownToHtml :: Text -> Text
+markdownToHtml = id
