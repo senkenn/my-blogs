@@ -4,6 +4,7 @@ import Data.Aeson (FromJSON, eitherDecodeFileStrict)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import MdCore (markdownToHtml)
+import Test.Hspec
 
 data SpecExample = SpecExample
   { markdown :: Text,
@@ -11,12 +12,13 @@ data SpecExample = SpecExample
     example :: Int,
     section :: Text
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance FromJSON SpecExample
 
 main :: IO ()
-main = do
+main = hspe $ do
+  describe "markdownToHtml" $ do
   result <- eitherDecodeFileStrict "test-data/spec.json"
   case result of
     Left err -> error err
